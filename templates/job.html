@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Job #{{ job.id }} - Image Deduplicator{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Job #{{ job.id }} - {{ job.directory }}
+        <span class="status-badge status-{{ job.status }}" style="float: right;">
+            {{ job.status.upper() }}
+        </span>
+    </div>
+    
+    <table>
+        <tr>
+            <th style="width: 200px;">Directory</th>
+            <td>{{ job.directory }}</td>
+        </tr>
+        <tr>
+            <th>Threshold</th>
+            <td>{{ job.threshold }}</td>
+        </tr>
+        <tr>
+            <th>Hash Size</th>
+            <td>{{ job.hash_size }}</td>
+        </tr>
+        <tr>
+            <th>Created</th>
+            <td>{{ job.created_at }}</td>
+        </tr>
+        {% if job.started_at %}
+        <tr>
+            <th>Started</th>
+            <td>{{ job.started_at }}</td>
+        </tr>
+        {% endif %}
+        {% if job.completed_at %}
+        <tr>
+            <th>Completed</th>
+            <td>{{ job.completed_at }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <th>Images Processed</th>
+            <td>{{ job.processed_images }} / {{ job.total_images }}</td>
+        </tr>
+        <tr>
+            <th>Duplicate Groups</th>
+            <td>{{ job.duplicate_groups }}</td>
+        </tr>
+    </table>
+    
+    {% if job.error_message %}
+    <div class="alert alert-danger" style="margin-top: 20px;">
+        <strong>Error:</strong> {{ job.error_message }}
+    </div>
+    {% endif %}
+</div>
+
+{% if groups %}
+<div class="card">
+    <div class="card-header">📦 Duplicate Groups ({{ groups|length }})</div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Group ID</th>
+                <th>Images</th>
+                <th>Total Size</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for group in groups %}
+            <tr>
+                <td>#{{ group.id }}</td>
+                <td>{{ group.image_count }} images</td>
+                <td>{{ "%.2f"|format(group.total_size / 1024 / 1024) }} MB</td>
+                <td>
+                    <a href="/groups/{{ group.id }}" class="btn btn-secondary" 
+                       style="padding: 6px 12px; font-size: 14px;">
+                        Review
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <p style="text-align: center; color: #6c757d; padding: 40px;">
+        {% if job.status == 'completed' %}
+            No duplicates found in this job.
+        {% else %}
+            Job is still processing...
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+<div style="margin-top: 20px;">
+    <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+{% endblock %}

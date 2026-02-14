@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  deduplicator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: image-deduplicator:latest
+    container_name: image-deduplicator
+    volumes:
+      # Mount your image directory
+      - ./test_images:/data:ro
+      # Mount state directory for checkpoint persistence
+      - ./state:/state
+      # Mount output directory for reports
+      - ./output:/output
+    command: >
+      /data
+      --threshold 10
+      --checkpoint-file /state/.dedup_checkpoint.json
+      --output /output/duplicates_report.html
+      --json-output /output/duplicates_report.json
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: "no"
+
+  # Service for resumable processing
+  deduplicator-resume:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: image-deduplicator:latest
+    container_name: image-deduplicator-resume
+    volumes:
+      - ./test_images:/data:ro
+      - ./state:/state
+      - ./output:/output
+    command: >
+      /data
+      --resume
+      --threshold 10
+      --checkpoint-file /state/.dedup_checkpoint.json
+      --output /output/duplicates_report.html
+      --json-output /output/duplicates_report.json
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: "no"
+
+  # Service for SSIM-enabled processing
+  deduplicator-ssim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: image-deduplicator:latest
+    container_name: image-deduplicator-ssim
+    volumes:
+      - ./test_images:/data:ro
+      - ./state:/state
+      - ./output:/output
+    command: >
+      /data
+      --threshold 10
+      --use-ssim
+      --ssim-threshold 0.95
+      --checkpoint-file /state/.dedup_checkpoint.json
+      --output /output/duplicates_report.html
+      --json-output /output/duplicates_report.json
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: "no"
+
+  # Web UI service
+  web-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: image-deduplicator:latest
+    container_name: image-deduplicator-web
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./test_images:/data:ro
+      - ./state:/state
+      - ./db:/app/data
+    command: python web_ui.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=false
+      - DB_PATH=/app/data/dedup.db
+    restart: unless-stopped

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Group #{{ group.id }} - Image Deduplicator{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        Duplicate Group #{{ group.id }}
+    </div>
+    
+    <div class="alert alert-info">
+        <strong>{{ images|length }} duplicate images found</strong><br>
+        Total size: {{ "%.2f"|format((images|sum(attribute='file_size')) / 1024 / 1024) }} MB
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">🖼️ Images in Group</div>
+    
+    <div class="image-grid">
+        {% for image in images %}
+        <div class="image-card {% if image.is_keeper %}keeper{% endif %} {% if image.marked_for_deletion %}marked-delete{% endif %}"
+             id="image-{{ image.id }}">
+            <img src="file://{{ image.path }}" alt="{{ image.path }}" 
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23ddd%22 width=%22200%22 height=%22200%22/><text x=%2250%%22 y=%2250%%22 text-anchor=%22middle%22 dy=%22.3em%22>No Preview</text></svg>'">
+            
+            <div class="image-card-info">
+                <div style="font-size: 0.9em; margin-bottom: 10px;">
+                    <strong>{{ image.width }}×{{ image.height }}</strong><br>
+                    {{ "%.2f"|format(image.file_size / 1024) }} KB<br>
+                    {{ image.format }}
+                    {% if image.is_keeper %}
+                        <span style="color: #28a745; font-weight: bold;">✓ KEEPER</span>
+                    {% endif %}
+                </div>
+                
+                <div style="font-size: 0.8em; color: #6c757d; margin-bottom: 10px;">
+                    {{ image.path.split('/')[-1] }}
+                </div>
+                
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-success" style="flex: 1; padding: 6px; font-size: 12px;"
+                            onclick="markAction({{ image.id }}, 'keep')">
+                        Keep
+                    </button>
+                    <button class="btn btn-danger" style="flex: 1; padding: 6px; font-size: 12px;"
+                            onclick="markAction({{ image.id }}, 'delete')">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div style="margin-top: 20px;">
+    <a href="/jobs/{{ group.job_id }}" class="btn btn-secondary">← Back to Job</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function markAction(imageId, action) {
+    try {
+        const response = await fetch(`/api/images/${imageId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action })
+        });
+        
+        if (response.ok) {
+            const card = document.getElementById(`image-${imageId}`);
+            
+            // Remove existing classes
+            card.classList.remove('keeper', 'marked-delete');
+            
+            // Add new class
+            if (action === 'keep') {
+                card.classList.add('keeper');
+            } else if (action === 'delete') {
+                card.classList.add('marked-delete');
+            }
+            
+            // Show feedback
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓';
+            setTimeout(() => { btn.textContent = originalText; }, 1000);
+        } else {
+            alert('Error marking image');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Image Deduplicator{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">🚀 Start New Deduplication Job</div>
+    
+    <form id="newJobForm">
+        <div class="form-group">
+            <label for="directory">Image Directory Path</label>
+            <input type="text" id="directory" name="directory" 
+                   placeholder="/data/photos" required>
+            <small style="color: #6c757d;">Enter the full path to scan for images</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="threshold">Similarity Threshold (0-32)</label>
+            <input type="number" id="threshold" name="threshold" 
+                   value="10" min="0" max="32" required>
+            <small style="color: #6c757d;">Lower = stricter matching (6-10 recommended)</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="hash_size">Hash Size</label>
+            <select id="hash_size" name="hash_size">
+                <option value="8" selected>8 (Fast, Standard)</option>
+                <option value="16">16 (More Precise)</option>
+                <option value="32">32 (Highest Precision)</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn">
+            <span id="submitText">Start Processing</span>
+            <span id="submitLoading" class="loading" style="display: none;"></span>
+        </button>
+    </form>
+</div>
+
+{% if processing_state.active %}
+<div class="card">
+    <div class="card-header">⚡ Active Processing</div>
+    
+    <div class="alert alert-info">
+        <strong>Job #{{ processing_state.job_id }}</strong> is currently running...
+    </div>
+    
+    <div id="progressContainer">
+        <p><strong>Current File:</strong> <span id="currentFile">{{ processing_state.current_file }}</span></p>
+        <p><strong>Progress:</strong> <span id="progressText">{{ processing_state.processed_files }}</span> / <span id="totalFiles">{{ processing_state.total_files }}</span> files</p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: {{ processing_state.progress }}%">
+                <span id="progressPercent">{{ "%.1f"|format(processing_state.progress) }}%</span>
+            </div>
+        </div>
+        
+        <p style="margin-top: 15px;"><strong>Duplicates Found:</strong> <span id="duplicatesFound">{{ processing_state.duplicates_found }}</span></p>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">📊 Recent Jobs</div>
+    
+    {% if jobs %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Directory</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Duplicates</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>#{{ job.id }}</td>
+                <td>{{ job.directory }}</td>
+                <td>
+                    <span class="status-badge status-{{ job.status }}">
+                        {{ job.status.upper() }}
+                    </span>
+                </td>
+                <td>
+                    {% if job.total_images > 0 %}
+                        {{ job.processed_images }} / {{ job.total_images }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ job.duplicate_groups or 0 }}</td>
+                <td>{{ job.created_at[:19] }}</td>
+                <td>
+                    <a href="/jobs/{{ job.id }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 14px;">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: #6c757d; text-align: center; padding: 40px;">
+        No jobs yet. Start your first deduplication job above!
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('newJobForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const submitText = document.getElementById('submitText');
+    const submitLoading = document.getElementById('submitLoading');
+    
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'inline-block';
+    
+    const formData = {
+        directory: document.getElementById('directory').value,
+        threshold: parseInt(document.getElementById('threshold').value),
+        hash_size: parseInt(document.getElementById('hash_size').value)
+    };
+    
+    try {
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Job started! Redirecting to job page...');
+            window.location.href = '/jobs/' + data.job_id;
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+            submitBtn.disabled = false;
+            submitText.style.display = 'inline';
+            submitLoading.style.display = 'none';
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+        submitBtn.disabled = false;
+        submitText.style.display = 'inline';
+        submitLoading.style.display = 'none';
+    }
+});
+
+{% if processing_state.active %}
+// Poll for progress updates
+setInterval(async () => {
+    try {
+        const response = await fetch('/api/jobs/{{ processing_state.job_id }}/progress');
+        const data = await response.json();
+        
+        if (data.active) {
+            document.getElementById('currentFile').textContent = data.current_file;
+            document.getElementById('progressText').textContent = data.processed_files;
+            document.getElementById('totalFiles').textContent = data.total_files;
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            document.getElementById('progressPercent').textContent = data.progress.toFixed(1) + '%';
+            document.getElementById('duplicatesFound').textContent = data.duplicates_found;
+        } else if (data.status === 'completed') {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error polling progress:', error);
+    }
+}, 2000);
+{% endif %}
+</script>
+{% endblock %}
