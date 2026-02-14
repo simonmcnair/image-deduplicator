@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Checkpoints
+.dedup_checkpoint.json
+*.checkpoint.json
+
+# Reports
+duplicates_report.*
+*_report.html
+*_report.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# State directories
+state/
+output/
+db/
+
+# Test outputs
+coverage.xml
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Docker
+.dockerignore
