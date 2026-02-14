@@ -63,8 +63,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD python -c "import imagehash, PIL, flask; print('OK')" || exit 1
 
 # Labels
-LABEL maintainer="Senior Principal Engineer"
 LABEL description="Advanced Image Deduplication Tool with Perceptual Hashing and Resume Capability"
 LABEL version="2.0.0"
-LABEL org.opencontainers.image.source="https://github.com/YOUR_USERNAME/image-deduplicator"
+LABEL org.opencontainers.image.source="https://github.com/simonmcnair/image-deduplicator"
 LABEL org.opencontainers.image.licenses="MIT"
