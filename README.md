@@ -28,8 +28,8 @@ python image_deduplicate.py /path/to/images
 
 ### Docker
 ```bash
-docker pull ghcr.io/USERNAME/image-deduplicator:latest
-docker run --rm -v /path/to/images:/data ghcr.io/USERNAME/image-deduplicator:latest
+docker pull ghcr.io/simonmcnair/image-deduplicator:latest
+docker run --rm -v /path/to/images:/data ghcr.io/simonmcnair/image-deduplicator:latest
 ```
 
 ## Resumable Processing
@@ -155,7 +155,3 @@ black --line-length=100 image_deduplicate.py
 flake8 image_deduplicate.py --max-line-length=100
 mypy image_deduplicate.py --ignore-missing-imports
 ```
-
-## Credits
-
-Senior Principal Engineer - Production-grade image deduplication
