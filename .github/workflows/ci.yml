@@ -39,7 +39,7 @@ jobs:
           chmod +x run_tests.sh
           ./run_tests.sh
       
-      - name: Upload coverage to Codecov
+  delint:
     name: Code Quality Checks
     runs-on: ubuntu-latest
     
